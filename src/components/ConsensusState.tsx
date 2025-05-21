@@ -6,9 +6,9 @@ type ConsensusResponse = {
     round_state: {
       ["height/round/step"]: string;
       step?: string;
-      votes?: {
-        prevotes: string;
-        precommits: string;
+      proposer?: {
+        address: string;
+        index: number;
       };
     };
   };
@@ -21,6 +21,21 @@ type Props = {
 const ConsensusState: React.FC<Props> = ({ rpcPort }) => {
   const [data, setData] = useState<ConsensusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [nodeInfo, setNodeInfo] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchNodeInfo = async () => {
+      try {
+        const res = await fetch(`/api/status?port=${rpcPort}`);
+        const json = await res.json();
+        console.log(json);
+        setNodeInfo(json);
+      } catch (err: any) {
+        console.log(err.message);
+      }
+    };
+    fetchNodeInfo();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,7 +54,7 @@ const ConsensusState: React.FC<Props> = ({ rpcPort }) => {
 
     fetchData();
 
-    const interval = setInterval(fetchData, 3000);
+    const interval = setInterval(fetchData, 1000);
     return () => clearInterval(interval);
   }, [rpcPort]);
 
@@ -52,17 +67,19 @@ const ConsensusState: React.FC<Props> = ({ rpcPort }) => {
     0: "NewHeight",
     1: "Propose",
     2: "Prevote",
-    3: "Precommit",
-    4: "Commit",
+    3: "PrevoteWait",
+    4: "Precommit",
+    5: "PrecommitWait",
+    6: "Commit",
   };
 
   return (
-    <div>
-      <h3>Consensus State @ {rpcPort}</h3>
+    <div className="border">
+      <h3>Port: {rpcPort}</h3>
+      <h2>Address: {nodeInfo?.result?.validator_info.address}</h2>
       <p>Step: {stepStr}</p>
       <p>Current Step: {stepMap[stepNum] ?? `Unknown (${stepNum})`}</p>
-      <p>Prevotes: {data.result.round_state.votes?.prevotes}</p>
-      <p>Precommits: {data.result.round_state.votes?.precommits}</p>
+      <p>Proposer : {data.result.round_state.proposer?.address}</p>
     </div>
   );
 };
